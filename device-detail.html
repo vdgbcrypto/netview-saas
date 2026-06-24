@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NetView — Device Detail</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-primary: #08090a;
+  --bg-panel: #0f1011;
+  --bg-surface: #191a1b;
+  --bg-elevated: #28282c;
+  --text-primary: #f7f8f8;
+  --text-secondary: #d0d6e0;
+  --text-muted: #8a8f98;
+  --text-subtle: #62666d;
+  --accent: #5e6ad2;
+  --accent-hover: #7170ff;
+  --border: rgba(255,255,255,0.08);
+  --border-subtle: rgba(255,255,255,0.05);
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #3b82f6;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+.app { display: flex; height: 100vh; overflow: hidden; }
+.sidebar {
+  width: 240px;
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.header {
+  height: 56px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  background: var(--bg-panel);
+  flex-shrink: 0;
+}
+.breadcrumb {
+  font-size: 13px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.breadcrumb span { color: var(--text-primary); }
+.breadcrumb svg { width: 12px; height: 12px; opacity: 0.5; }
+.header-actions { margin-left: auto; display: flex; gap: 8px; }
+.btn {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.03);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s;
+}
+.btn:hover { background: rgba(255,255,255,0.06); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: white; }
+.btn-primary:hover { background: var(--accent-hover); }
+.content { flex: 1; overflow: auto; padding: 24px; }
+
+/* Sidebar */
+.logo {
+  padding: 16px 20px;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.nav { flex: 1; padding: 8px 12px; }
+.nav-section { margin-bottom: 16px; }
+.nav-label {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-subtle);
+  padding: 8px 10px 4px;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.nav-item:hover { background: rgba(255,255,255,0.03); color: var(--text-secondary); }
+.nav-item.active { background: rgba(255,255,255,0.05); color: var(--text-primary); }
+.nav-icon { width: 16px; height: 16px; opacity: 0.7; }
+
+/* Device Header */
+.device-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.device-icon {
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  background: rgba(59,130,246,0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(59,130,246,0.2);
+}
+.device-info h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.3px; }
+.device-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(16,185,129,0.12);
+  color: var(--success);
+  margin-left: 8px;
+}
+.status-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--success); box-shadow: 0 0 6px var(--success); }
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 20px;
+}
+.tab {
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 16px;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+}
+.tab:hover { color: var(--text-secondary); }
+.tab.active { color: var(--text-primary); border-bottom-color: var(--accent); }
+
+/* Grid */
+.detail-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 16px;
+}
+.card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.card-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.card-title { font-size: 13px; font-weight: 500; color: var(--text-secondary); }
+.card-body { padding: 16px; }
+
+/* Info Table */
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 13px;
+}
+.info-row:last-child { border-bottom: none; }
+.info-label { color: var(--text-muted); font-size: 12px; }
+.info-value { color: var(--text-primary); font-family: var(--font-mono); font-size: 12px; }
+
+/* Ports */
+.ports-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+.port {
+  aspect-ratio: 1;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.port.active { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: var(--success); }
+.port.inactive { background: rgba(255,255,255,0.02); border: 1px solid var(--border-subtle); color: var(--text-subtle); }
+.port.disabled { background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.03); color: rgba(255,255,255,0.1); }
+.port:hover { transform: scale(1.1); }
+
+/* Traffic Chart */
+.chart-container { height: 180px; position: relative; }
+.chart-canvas { width: 100%; height: 100%; }
+
+/* Connections Table */
+.conn-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 80px 80px 60px;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  align-items: center;
+}
+.conn-row.header {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-subtle);
+  border-bottom: 1px solid var(--border);
+}
+.conn-row span:nth-child(1) { color: var(--text-secondary); }
+.conn-row span:nth-child(2) { color: var(--text-muted); }
+.conn-row span:nth-child(3) { color: var(--text-muted); }
+.conn-row span:nth-child(4) { color: var(--info); }
+.conn-row span:nth-child(5) { color: var(--text-subtle); text-align: right; }
+
+/* Metrics */
+.metrics-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+.metric-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 14px;
+}
+.metric-label { font-size: 11px; font-weight: 500; color: var(--text-muted); margin-bottom: 4px; }
+.metric-value { font-size: 20px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.3px; }
+.metric-bar { height: 4px; background: rgba(255,255,255,0.05); border-radius: 2px; margin-top: 8px; overflow: hidden; }
+.metric-bar-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+.metric-bar-fill.good { background: var(--success); }
+.metric-bar-fill.warn { background: var(--warning); }
+.metric-bar-fill.info { background: var(--info); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+@media (max-width: 1024px) {
+  .detail-grid { grid-template-columns: 1fr; }
+  .ports-grid { grid-template-columns: repeat(4, 1fr); }
+}
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .metrics-row { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="logo"><span class="logo-dot"></span>NetView</div>
+    <nav class="nav">
+      <div class="nav-section">
+        <div class="nav-label">Overview</div>
+        <div class="nav-item">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          Dashboard
+        </div>
+        <div class="nav-item">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          Topology
+        </div>
+        <div class="nav-item active">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Devices
+        </div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-label">Monitor</div>
+        <div class="nav-item">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>
+          Traffic
+        </div>
+        <div class="nav-item">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          Alerts
+        </div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-label">System</div>
+        <div class="nav-item">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Settings
+        </div>
+      </div>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <header class="header">
+      <div class="breadcrumb">
+        Dashboard
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        Devices
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        <span>Core-SW-01</span>
+      </div>
+      <div class="header-actions">
+        <button class="btn">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/><path d="M12 8v4l3 3"/></svg>
+          Ping
+        </button>
+        <button class="btn">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          SSH
+        </button>
+        <button class="btn btn-primary">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Edit
+        </button>
+      </div>
+    </header>
+
+    <div class="content">
+      <!-- Device Header -->
+      <div class="device-header">
+        <div class="device-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><circle cx="17" cy="6" r="1"/><circle cx="17" cy="18" r="1"/></svg>
+        </div>
+        <div class="device-info">
+          <h1>Core-SW-01 <span class="status-badge">Online</span></h1>
+          <div class="device-meta">Cisco Catalyst 9300-48P &middot; Firmware 17.6.4 &middot; VLAN 1,10,20,30</div>
+        </div>
+      </div>
+
+      <!-- Metrics -->
+      <div class="metrics-row">
+        <div class="metric-card">
+          <div class="metric-label">CPU Utilization</div>
+          <div class="metric-value">87%</div>
+          <div class="metric-bar"><div class="metric-bar-fill warn" style="width:87%"></div></div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Memory Usage</div>
+          <div class="metric-value">62%</div>
+          <div class="metric-bar"><div class="metric-bar-fill good" style="width:62%"></div></div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Throughput (24h avg)</div>
+          <div class="metric-value">8.2 Gbps</div>
+          <div class="metric-bar"><div class="metric-bar-fill info" style="width:72%"></div></div>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <div class="tab active">Overview</div>
+        <div class="tab">Ports</div>
+        <div class="tab">Traffic</div>
+        <div class="tab">Neighbors</div>
+        <div class="tab">Config</div>
+      </div>
+
+      <div class="detail-grid">
+        <!-- Left Column -->
+        <div>
+          <!-- Device Info -->
+          <div class="card" style="margin-bottom:16px;">
+            <div class="card-header">
+              <span class="card-title">Device Information</span>
+            </div>
+            <div class="card-body">
+              <div class="info-row"><span class="info-label">Hostname</span><span class="info-value">Core-SW-01</span></div>
+              <div class="info-row"><span class="info-label">Management IP</span><span class="info-value">10.0.0.1</span></div>
+              <div class="info-row"><span class="info-label">MAC Address</span><span class="info-value">A4:B1:C2:D3:E4:F5</span></div>
+              <div class="info-row"><span class="info-label">Vendor</span><span class="info-value">Cisco Systems</span></div>
+              <div class="info-row"><span class="info-label">Model</span><span class="info-value">C9300-48P-A</span></div>
+              <div class="info-row"><span class="info-label">Serial</span><span class="info-value">FCW2345G0KL</span></div>
+              <div class="info-row"><span class="info-label">Firmware</span><span class="info-value">17.6.4</span></div>
+              <div class="info-row"><span class="info-label">Uptime</span><span class="info-value">47d 12h 33m</span></div>
+              <div class="info-row"><span class="info-label">Last Config Change</span><span class="info-value">2026-06-22 09:14:22</span></div>
+            </div>
+          </div>
+
+          <!-- Port Map -->
+          <div class="card" style="margin-bottom:16px;">
+            <div class="card-header">
+              <span class="card-title">Port Status</span>
+              <span style="font-size:11px;color:var(--text-muted);">24 / 48 active</span>
+            </div>
+            <div class="card-body">
+              <div class="ports-grid">
+                <div class="port active">1</div><div class="port active">2</div><div class="port active">3</div><div class="port active">4</div><div class="port active">5</div><div class="port active">6</div>
+                <div class="port active">7</div><div class="port active">8</div><div class="port active">9</div><div class="port active">10</div><div class="port active">11</div><div class="port active">12</div>
+                <div class="port active">13</div><div class="port active">14</div><div class="port active">15</div><div class="port active">16</div><div class="port active">17</div><div class="port active">18</div>
+                <div class="port active">19</div><div class="port active">20</div><div class="port active">21</div><div class="port active">22</div><div class="port active">23</div><div class="port active">24</div>
+                <div class="port inactive">25</div><div class="port inactive">26</div><div class="port inactive">27</div><div class="port inactive">28</div><div class="port inactive">29</div><div class="port inactive">30</div>
+                <div class="port disabled">31</div><div class="port disabled">32</div><div class="port disabled">33</div><div class="port disabled">34</div><div class="port disabled">35</div><div class="port disabled">36</div>
+                <div class="port disabled">37</div><div class="port disabled">38</div><div class="port disabled">39</div><div class="port disabled">40</div><div class="port disabled">41</div><div class="port disabled">42</div>
+                <div class="port disabled">43</div><div class="port disabled">44</div><div class="port disabled">45</div><div class="port disabled">46</div><div class="port disabled">47</div><div class="port disabled">48</div>
+              </div>
+              <div style="display:flex;gap:16px;margin-top:10px;font-size:10px;color:var(--text-subtle);">
+                <span style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:2px;background:rgba(16,185,129,0.3);"></span> Active</span>
+                <span style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:2px;background:rgba(255,255,255,0.1);"></span> Inactive</span>
+                <span style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:2px;background:rgba(255,255,255,0.03);"></span> Disabled</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Traffic Chart -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Traffic (Last 6 Hours)</span>
+              <div style="display:flex;gap:4px;">
+                <span style="font-size:10px;padding:2px 6px;border-radius:4px;background:var(--accent);color:white;">In</span>
+                <span style="font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,0.05);color:var(--text-muted);">Out</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="chart-container">
+                <canvas class="chart-canvas" id="trafficChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column -->
+        <div>
+          <!-- Connected Devices -->
+          <div class="card" style="margin-bottom:16px;">
+            <div class="card-header">
+              <span class="card-title">Connected Devices</span>
+              <span style="font-size:11px;color:var(--text-muted);">12 direct</span>
+            </div>
+            <div class="card-body" style="padding:0;">
+              <div class="conn-row header"><span>Device</span><span>IP</span><span>Port</span><span>Speed</span><span>VLAN</span></div>
+              <div style="padding:0 16px;">
+                <div class="conn-row"><span>nas-01</span><span>10.0.1.10</span><span>Gi0/1</span><span>1G</span><span>10</span></div>
+                <div class="conn-row"><span>web-srv-03</span><span>10.0.2.15</span><span>Gi0/2</span><span>1G</span><span>20</span></div>
+                <div class="conn-row"><span>db-cluster</span><span>10.0.2.20</span><span>Gi0/3</span><span>10G</span><span>20</span></div>
+                <div class="conn-row"><span>backup-srv</span><span>10.0.3.5</span><span>Gi0/4</span><span>1G</span><span>30</span></div>
+                <div class="conn-row"><span>media-enc</span><span>10.0.1.42</span><span>Gi0/5</span><span>1G</span><span>10</span></div>
+                <div class="conn-row"><span>AP-01</span><span>10.0.0.5</span><span>Gi0/6</span><span>1G</span><span>1</span></div>
+                <div class="conn-row"><span>dev-workstn</span><span>10.0.1.55</span><span>Gi0/7</span><span>1G</span><span>10</span></div>
+                <div class="conn-row"><span>iot-hub</span><span>10.0.4.10</span><span>Gi0/8</span><span>100M</span><span>40</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Events -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Recent Events</span>
+            </div>
+            <div class="card-body">
+              <div style="font-size:11px;">
+                <div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--border-subtle);">
+                  <span style="color:var(--text-subtle);font-family:var(--font-mono);flex-shrink:0;">14:28</span>
+                  <span style="color:var(--warning);">!</span>
+                  <span style="color:var(--text-muted);">CPU threshold exceeded (87%)</span>
+                </div>
+                <div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--border-subtle);">
+                  <span style="color:var(--text-subtle);font-family:var(--font-mono);flex-shrink:0;">14:12</span>
+                  <span style="color:var(--info);">i</span>
+                  <span style="color:var(--text-muted);">Config backup completed</span>
+                </div>
+                <div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--border-subtle);">
+                  <span style="color:var(--text-subtle);font-family:var(--font-mono);flex-shrink:0;">13:45</span>
+                  <span style="color:var(--info);">i</span>
+                  <span style="color:var(--text-muted);">Port Gi0/24 link up (web-srv-04)</span>
+                </div>
+                <div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--border-subtle);">
+                  <span style="color:var(--text-subtle);font-family:var(--font-mono);flex-shrink:0;">12:30</span>
+                  <span style="color:var(--info);">i</span>
+                  <span style="color:var(--text-muted);">STP topology change on VLAN 20</span>
+                </div>
+                <div style="display:flex;gap:8px;padding:6px 0;">
+                  <span style="color:var(--text-subtle);font-family:var(--font-mono);flex-shrink:0;">11:05</span>
+                  <span style="color:var(--info);">i</span>
+                  <span style="color:var(--text-muted);">Firmware update available: 17.9.1</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+// Traffic Chart
+const chartCanvas = document.getElementById('trafficChart');
+const ctx = chartCanvas.getContext('2d');
+
+function resizeChart() {
+  const container = chartCanvas.parentElement;
+  chartCanvas.width = container.clientWidth * window.devicePixelRatio;
+  chartCanvas.height = container.clientHeight * window.devicePixelRatio;
+  chartCanvas.style.width = container.clientWidth + 'px';
+  chartCanvas.style.height = container.clientHeight + 'px';
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+}
+resizeChart();
+window.addEventListener('resize', resizeChart);
+
+// Generate sample data
+const dataPoints = 72;
+const data = [];
+for (let i = 0; i < dataPoints; i++) {
+  const base = 40 + Math.sin(i * 0.1) * 20;
+  data.push({
+    in: base + Math.random() * 15,
+    out: base * 0.7 + Math.random() * 10
+  });
+}
+
+function drawChart() {
+  const w = chartCanvas.width / window.devicePixelRatio;
+  const h = chartCanvas.height / window.devicePixelRatio;
+  const padding = { top: 10, right: 10, bottom: 20, left: 35 };
+  const chartW = w - padding.left - padding.right;
+  const chartH = h - padding.top - padding.bottom;
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = padding.top + (chartH / 4) * i;
+    ctx.beginPath();
+    ctx.moveTo(padding.left, y);
+    ctx.lineTo(w - padding.right, y);
+    ctx.stroke();
+
+    // Y-axis labels
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.font = '10px JetBrains Mono, monospace';
+    ctx.textAlign = 'right';
+    const val = Math.round(100 - (i / 4) * 100);
+    ctx.fillText(val + '%', padding.left - 5, y + 3);
+  }
+
+  // Draw area fills
+  function drawArea(key, color) {
+    ctx.beginPath();
+    ctx.moveTo(padding.left, padding.top + chartH);
+    for (let i = 0; i < data.length; i++) {
+      const x = padding.left + (i / (data.length - 1)) * chartW;
+      const y = padding.top + chartH - (data[i][key] / 100) * chartH;
+      ctx.lineTo(x, y);
+    }
+    ctx.lineTo(padding.left + chartW, padding.top + chartH);
+    ctx.closePath();
+    const grad = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartH);
+    grad.addColorStop(0, color + '30');
+    grad.addColorStop(1, color + '05');
+    ctx.fillStyle = grad;
+    ctx.fill();
+  }
+
+  drawArea('in', '#5e6ad2');
+  drawArea('out', '#10b981');
+
+  // Draw lines
+  function drawLine(key, color) {
+    ctx.beginPath();
+    for (let i = 0; i < data.length; i++) {
+      const x = padding.left + (i / (data.length - 1)) * chartW;
+      const y = padding.top + chartH - (data[i][key] / 100) * chartH;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  drawLine('in', '#5e6ad2');
+  drawLine('out', '#10b981');
+
+  // X-axis labels
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.font = '10px JetBrains Mono, monospace';
+  ctx.textAlign = 'center';
+  const hours = ['6h', '5h', '4h', '3h', '2h', '1h', 'now'];
+  for (let i = 0; i < hours.length; i++) {
+    const x = padding.left + (i / (hours.length - 1)) * chartW;
+    ctx.fillText(hours[i], x, h - 4);
+  }
+}
+drawChart();
+</script>
+</body>
+</html>
