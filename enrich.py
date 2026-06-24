@@ -6,7 +6,7 @@ import concurrent.futures
 from scanner import HTTP_PROBE_TIMEOUT
 
 # Common ports to check for device fingerprinting
-COMMON_PORTS = [22, 80, 443, 445, 3389, 8080, 8443, 9100, 631, 161, 548, 5000, 5001, 8000, 8006, 8008, 8081, 9000, 9090, 9443, 3000, 3001, 5672, 2049, 111, 514, 53, 67, 68, 123, 137, 138, 139, 161, 162, 389, 636, 25, 110, 143, 993, 995, 587, 465]
+COMMON_PORTS = [22, 80, 443, 445, 3389, 8080, 8443, 9100, 631, 161, 548, 5000, 5001, 8000, 8006, 8008, 8081, 9000, 9090, 9443, 3000, 3001, 5672, 2049, 111, 514, 53, 67, 68, 123, 137, 138, 139, 161, 162, 389, 636, 993, 995, 1433, 3306, 5432, 6379, 27017, 50070, 8888, 9200, 5601, 4242]
 
 
 def resolve_hostname(ip):
@@ -33,7 +33,7 @@ def check_port(ip, port):
 
 
 def probe_ports(ip, ports=None):
-    """Scan common TCP ports on a host. Returns list of open ports."""
+    """Scan common TCP ports on a host sequentially. Returns list of open ports."""
     if ports is None:
         ports = COMMON_PORTS
     open_ports = []
@@ -51,16 +51,35 @@ def resolve_and_probe(ip):
 
 
 def enrich_devices(ips):
-    """Parallel hostname resolution and port probing for all IPs."""
+    """
+    Sequential hostname resolution and port probing.
+    
+    Reduced from parallel max_workers=30 to max_workers=3 to prevent
+    socket exhaustion. Each IP scans ports sequentially (not in parallel),
+    so total concurrent connections is bounded at ~3.
+    
+    This prevents "too many open files" crashes while still providing
+    reasonable performance (~30-50 IPs/minute depending on network latency).
+    """
     results = {}
-    print(f"[ENRICH] Resolving hostnames and probing ports for {len(ips)} hosts ...")
-    with concurrent.futures.ThreadPoolExecutor(max_workers=30) as ex:
+    print(f"[ENRICH] Resolving hostnames and probing ports for {len(ips)} hosts (sequential, max 3 parallel) ...")
+    
+    # Reduced to 3 concurrent IPs to prevent file descriptor exhaustion
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as ex:
         futures = {ex.submit(resolve_and_probe, ip): ip for ip in ips}
+        completed = 0
         for future in concurrent.futures.as_completed(futures):
             ip = futures[future]
-            hostname, open_ports = future.result()
-            results[ip] = {"hostname": hostname, "open_ports": open_ports}
-            hn = hostname or "N/A"
-            ports = ",".join(str(p) for p in open_ports) if open_ports else "none"
-            print(f"[ENRICH] {ip}: hostname={hn}, ports=[{ports}]")
+            try:
+                hostname, open_ports = future.result()
+                results[ip] = {"hostname": hostname, "open_ports": open_ports}
+                hn = hostname or "N/A"
+                ports = ",".join(str(p) for p in open_ports) if open_ports else "none"
+                completed += 1
+                print(f"[ENRICH] {completed}/{len(ips)} - {ip}: hostname={hn}, ports=[{ports}]")
+            except Exception as e:
+                print(f"[ENRICH] {ip}: ERROR - {e}")
+                results[ip] = {"hostname": None, "open_ports": []}
+    
+    print(f"[ENRICH] Completed enrichment for {len(results)} hosts")
     return results
